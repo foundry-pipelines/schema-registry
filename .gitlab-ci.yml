@@ -1,0 +1,26 @@
+# Operators' CI (ci/processor.yml, ci/flink.yml in common/scripts) commits here: <Type>/v<N>.json, the type's JSON
+# Schema versions (v1 up, no gaps, never edited), and <Type>/owner.txt, the operator that owns it. Checks that layout.
+layout:
+  image: python:3.12-slim
+  script:
+    - |
+      python3 - <<'PY'
+      import json, re, sys
+      from pathlib import Path
+      errors = []
+      for d in sorted(p for p in Path(".").iterdir() if p.is_dir() and not p.name.startswith(".")):
+          files = {f.name for f in d.iterdir()}
+          versions = sorted(int(m.group(1)) for f in files if (m := re.fullmatch(r"v(\d+)\.json", f)))
+          if not (d / "owner.txt").is_file() or not (d / "owner.txt").read_text().strip():
+              errors.append(f"{d}: no owner.txt")
+          if versions != list(range(1, len(versions) + 1)) or not versions:
+              errors.append(f"{d}: versions must be v1..vN, found {versions}")
+          errors += [f"{d}/{f}: unexpected file" for f in files - {"owner.txt"} if not re.fullmatch(r"v\d+\.json", f)]
+          for v in versions:
+              try:
+                  assert isinstance(json.loads((d / f"v{v}.json").read_text()), dict)
+              except Exception:
+                  errors.append(f"{d}/v{v}.json: not a JSON object")
+      print("\n".join(f"error: {e}" for e in errors) or "ok")
+      sys.exit(1 if errors else 0)
+      PY
