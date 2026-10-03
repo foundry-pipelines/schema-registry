@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "XmlPackets",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "guid": {
+      "type": "string",
+      "format": "guid"
+    },
+    "data": {
+      "type": "string",
+      "format": "byte"
+    },
+    "time_sent": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "host_ip": {
+      "type": "string"
+    },
+    "target_ip": {
+      "type": "string"
+    }
+  }
+}
