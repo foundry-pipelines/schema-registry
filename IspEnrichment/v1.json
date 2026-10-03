@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "IspEnrichment",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "guid": {
+      "type": "string",
+      "format": "guid"
+    },
+    "ISP": {
+      "type": "string"
+    }
+  }
+}
