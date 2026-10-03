@@ -1,7 +1,6 @@
 # Operators' CI (ci/processor.yml, ci/flink.yml in common/scripts) commits here. A type is a folder with a
 # metadata.yaml (owner: the repo name of the operator that owns it; ignoreSchema: true for a type without a JSON Schema) and,
-# unless ignoreSchema, v1.json..v<N>.json: its schema versions, never edited. Checks that layout, then
-# re-renders the IDE schemas in common/scripts (their type names come from here).
+# unless ignoreSchema, v1.json..v<N>.json: its schema versions, never edited. Checks that layout.
 layout:
   image: python:3.12-slim
   script:
@@ -43,12 +42,3 @@ layout:
       print("\n".join(f"error: {e}" for e in errors) or "ok")
       sys.exit(1 if errors else 0)
       PY
-
-ide-schemas:
-  needs: [layout]
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  inherit:
-    variables: false  # scripts doesn't accept pipeline variables
-  trigger:
-    project: foundry-platform/common/scripts
