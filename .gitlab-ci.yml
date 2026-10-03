@@ -1,21 +1,40 @@
-# Operators' CI (ci/processor.yml, ci/flink.yml in common/scripts) commits here: <Type>/v<N>.json, the type's JSON
-# Schema versions (v1 up, no gaps, never edited), and <Type>/owner.txt, the operator that owns it. Checks that layout.
+# Operators' CI (ci/processor.yml, ci/flink.yml in common/scripts) commits here. A type is a folder with a
+# metadata.yaml (owner: the repo name of the operator that owns it; ignoreSchema: true for a type without a JSON Schema) and,
+# unless ignoreSchema, v1.json..v<N>.json: its schema versions, never edited. Checks that layout, then
+# re-renders the IDE schemas in common/scripts (their type names come from here).
 layout:
   image: python:3.12-slim
   script:
+    - pip install --quiet pyyaml
     - |
       python3 - <<'PY'
       import json, re, sys
       from pathlib import Path
+      import yaml
       errors = []
       for d in sorted(p for p in Path(".").iterdir() if p.is_dir() and not p.name.startswith(".")):
           files = {f.name for f in d.iterdir()}
           versions = sorted(int(m.group(1)) for f in files if (m := re.fullmatch(r"v(\d+)\.json", f)))
-          if not (d / "owner.txt").is_file() or not (d / "owner.txt").read_text().strip():
-              errors.append(f"{d}: no owner.txt")
-          if versions != list(range(1, len(versions) + 1)) or not versions:
+          try:
+              meta = yaml.safe_load((d / "metadata.yaml").read_text())
+          except FileNotFoundError:
+              errors.append(f"{d}: no metadata.yaml")
+              continue
+          except yaml.YAMLError as e:
+              errors.append(f"{d}/metadata.yaml: not YAML ({e})")
+              continue
+          if not isinstance(meta, dict) or not isinstance(meta.get("owner"), str) or not meta["owner"].strip():
+              errors.append(f"{d}/metadata.yaml: owner required")
+              meta = meta if isinstance(meta, dict) else {}
+          errors += [f"{d}/metadata.yaml: unknown key {k!r}" for k in meta if k not in ("owner", "ignoreSchema")]
+          if not isinstance(meta.get("ignoreSchema", False), bool):
+              errors.append(f"{d}/metadata.yaml: ignoreSchema must be true or false")
+          if meta.get("ignoreSchema") is True:
+              if versions:
+                  errors.append(f"{d}: ignoreSchema, but has schema versions {versions}")
+          elif versions != list(range(1, len(versions) + 1)) or not versions:
               errors.append(f"{d}: versions must be v1..vN, found {versions}")
-          errors += [f"{d}/{f}: unexpected file" for f in files - {"owner.txt"} if not re.fullmatch(r"v\d+\.json", f)]
+          errors += [f"{d}/{f}: unexpected file" for f in files - {"metadata.yaml"} if not re.fullmatch(r"v\d+\.json", f)]
           for v in versions:
               try:
                   assert isinstance(json.loads((d / f"v{v}.json").read_text()), dict)
@@ -24,3 +43,12 @@ layout:
       print("\n".join(f"error: {e}" for e in errors) or "ok")
       sys.exit(1 if errors else 0)
       PY
+
+ide-schemas:
+  needs: [layout]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  inherit:
+    variables: false  # scripts doesn't accept pipeline variables
+  trigger:
+    project: foundry-platform/common/scripts
