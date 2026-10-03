@@ -1,4 +1,4 @@
-# Operators' CI (ci/processor.yml, ci/flink.yml in common/scripts) commits here. A type is a folder with a
+# Operators' CI (operator/ci/dotnet.yml, operator/ci/flink.yml in foundry-ci) commits here. A type is a folder with a
 # metadata.yaml (owner: the repo name of the operator that owns it; ignoreSchema: true for a type without a JSON Schema) and,
 # unless ignoreSchema, v1.json..v<N>.json: its schema versions, never edited. Checks that layout.
 layout:
